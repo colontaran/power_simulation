@@ -1,6 +1,7 @@
 /* This is a stub code. You can modify it as you wish. */
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Scanner;
 class AppClient{
 	
@@ -32,7 +33,7 @@ class AppClient{
 		AppClient app = new AppClient();
 		//User interactive part
 		String option1, option2;
-		scan = new Scanner(System.in);
+		Scanner scan = new Scanner(System.in);
 		while(true){// Application menu to be displayed to the user.
 			System.out.println("Select an option:");
 			System.out.println("Type \"A\" Add an appliance");
@@ -70,7 +71,7 @@ class AppClient{
 				break; //exits the while if user chooses to quit
 			}
 		}
-		
+		scan.close();
 		
 	}
 }

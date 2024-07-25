@@ -45,10 +45,12 @@ probability (floating point, i.e..01=1%) that the appliance is "on" at any time
 smart (boolean) 
 Smart appliances (if "on") power reduction percent when changed to "low" status(floating point, i.e..33=33%).
 */
+		FileWriter fw = null;
+		BufferedWriter bw = null;
 		try
 		{
-			FileWriter fw = new FileWriter( "output.txt", false);
-			BufferedWriter bw = new BufferedWriter( fw );
+			fw = new FileWriter( "output.txt", false);
+			bw = new BufferedWriter( fw );
 			for (long location=1;location<=100 ;location++ ) {   // default 100 locations
 				int applianceCount=(int)(Math.random()*6)+15;  //15-20 appliances per location 
 				for (int i=1;i<=applianceCount;i++ ){
@@ -72,6 +74,9 @@ Smart appliances (if "on") power reduction percent when changed to "low" status(
 		catch( IOException ioe )
 		{
 			ioe.printStackTrace( );
+		}
+		finally {
+			bw.close();
 		}
 	}
 }
