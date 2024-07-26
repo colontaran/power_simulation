@@ -69,7 +69,7 @@ class AppClient{
 			switch(option1) {
 				case "A":
 					//add appliance code here
-					addAppliance(scan, appliances);
+					app.addAppliance(scan, appliances);
 					break;
 				case "D":
 					//delete appliance code here
@@ -83,6 +83,7 @@ class AppClient{
 					System.out.println("Enter path to file you would like to read: ");
 					String fileName = scan.nextLine();
 					app.readAppFile(fileName, appliances);
+					System.out.println("Appliances from the file have been added to the list!");
 					break;
 				case "S":
 					//start the simulation code here
@@ -103,7 +104,7 @@ class AppClient{
 		
 	}
 
-	private static void addAppliance(Scanner scan, ArrayList<Appliance> appliances) {
+	private void addAppliance(Scanner scan, ArrayList<Appliance> appliances) {
 		System.out.println("Enter appliance details: ");
 		try {
 
@@ -173,17 +174,23 @@ class AppClient{
 			//Validate Power Reduction - Colin
 			float lowPower;
 			while (true) {
-				lowPower = readFloatInput(scan, "Enter the percentage reduction of power when appliance is turned to 'LOW' state (0 < x < 1): ");
-				if (lowPower >= 0.0 && lowPower <= 1.0) {
-					break;
+				if (appType) {
+					lowPower = readFloatInput(scan, "Enter the percentage reduction of power when appliance is turned to 'LOW' state (0 < x < 1): ");
+					if (lowPower >= 0.0 && lowPower <= 1.0) {
+						break;
+					} else {
+						System.out.println("Power reduction must be between 0 and 1.");
+					}
 				} else {
-					System.out.println("Power reduction must be between 0 and 1.");
+					lowPower = 0.0f;
+					break;
 				}
 			}
 
 			//Create and Add new Appliance to appliance list - Colin
 			Appliance newAppliance = new Appliance(locationID, appName, onPower, probOn, appType, lowPower);
 			appliances.add(newAppliance);
+			System.out.println("A new appliance has been added to the list!");
 		} catch (NumberFormatException e) {
 			System.out.println("Invalid number format encountered. Returning to menu.");
 		} catch (ArrayIndexOutOfBoundsException e) {
