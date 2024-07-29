@@ -1,7 +1,7 @@
 public class Appliance {
 
     private String appName;
-    private final int appID; // shouldn't be changed therefore it is constant
+    private int appID; // shouldn't be changed therefore it is constant
     private int locationID;
     private int onPower;
     private float lowPowerRF; // RF stands for reduction factor, 
