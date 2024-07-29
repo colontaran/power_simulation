@@ -67,21 +67,26 @@ class AppClient{
 			System.out.println("Type \"Q\" Quit the program");
 			option1=scan.nextLine();
 			/* Complete the skeleton code below */
-			switch(option1) {
+			switch(option1) { //menu switch case - Colin
 				case "A":
-					//add appliance code here
+					//add appliance code here - Colin
 					app.addApp(scan, appliances); //turned this section into a method for readability
 					break;
 				case "D":
-					//delete appliance code here
+					//delete appliance code here - Colin
 					app.delApp(scan, appliances); //turned this section into a method for readability
 					break;
 				case "L":
-					//TODO: list appliances code here
+					//list appliances code here - Colin
+					System.out.printf("| Appliance ID | Location ID  | Appliance Name                                      | Wattage | On Probability |  Type  | Low Power Reduction Factor |\n");
+					System.out.printf("|---------------------------------------------------------------------------------------------------------------------------------------------------|\n");
+					for (Appliance appliance : appliances) {
+						appliance.printInfo();
+					}
 
 					break;
 				case "F":
-					//read appliances from a file code here
+					//read appliances from a file code here - Colin
 					System.out.println("Enter path to file you would like to read: ");
 					String fileName = scan.nextLine();
 					app.readAppFile(fileName, appliances);
@@ -106,6 +111,7 @@ class AppClient{
 		
 	}
 
+	// add appliance - Colin
 	private void addApp(Scanner scan, ArrayList<Appliance> appliances) {
 		System.out.println("Enter appliance details: ");
 		try {
@@ -185,6 +191,7 @@ class AppClient{
 		}
 	}
 
+	// delete appliance - Colin
 	private void delApp(Scanner scan, ArrayList<Appliance> appliances) {
 		System.out.println("Enter the ID of the appliance you would like to delete (8-digits): ");
 		int target = scan.nextInt();

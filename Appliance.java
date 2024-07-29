@@ -128,4 +128,9 @@ public class Appliance {
         // Check if the ID is 8 digits
         return (myID >= 10000000 && myID <= 99999999);
     }
+
+    public void printInfo() {
+        System.out.printf("|   %-8d   |   %-8d   | %-50s  | %7d | %14.4f | %-6b | %26.2f |\n", 
+        this.appID, this.locationID, this.appName, this.onPower, this.probOn, this.appType, this.lowPowerRF);
+    }
 }
