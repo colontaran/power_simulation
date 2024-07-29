@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.InputMismatchException;
 import java.util.Scanner;
+
 class AppClient{
 	
 	public void readAppFile(String file, ArrayList<Appliance> appliances){ // method to read the comma seperated appliance file.
@@ -17,22 +18,22 @@ class AppClient{
 			
 			/*Complete the method*/
 			while(scan.hasNextLine()) {
-				String[] applAttributes = scan.nextLine().split(",");
+				String[] appAttributes = scan.nextLine().split(",");
 				
-				if (applAttributes.length != 6) {
+				if (appAttributes.length != 6) {
                     System.out.println("Invalid format in file. Skipping this line.");
                     continue;
                 }
 
 				try {
-					String locationID = applAttributes[0];
-					String appName = applAttributes[1];
-					int onPower = Integer.parseInt(applAttributes[2]);
-					float probOn = Float.parseFloat(applAttributes[3]);
-					boolean appType = Boolean.parseBoolean(applAttributes[4]);
-					float lowPower = Float.parseFloat(applAttributes[5]);
+					int locationID = Integer.parseInt(appAttributes[0]);
+					String appName = appAttributes[1];
+					int onPower = Integer.parseInt(appAttributes[2]);
+					float probOn = Float.parseFloat(appAttributes[3]);
+					boolean appType = Boolean.parseBoolean(appAttributes[4]);
+					float lowPowerRF = Float.parseFloat(appAttributes[5]);
 
-					Appliance newAppliance = new Appliance(locationID, appName, onPower, probOn, appType, lowPower);
+					Appliance newAppliance = new Appliance(locationID, appName, onPower, probOn, appType, lowPowerRF);
 					appliances.add(newAppliance);
 				} catch (NumberFormatException e) {
 					System.out.println("Invalid number format encountered. Skipping this line.");
@@ -69,14 +70,15 @@ class AppClient{
 			switch(option1) {
 				case "A":
 					//add appliance code here
-					app.addAppliance(scan, appliances);
+					app.addApp(scan, appliances); //turned this section into a method for readability
 					break;
 				case "D":
 					//delete appliance code here
-
+					app.delApp(scan, appliances); //turned this section into a method for readability
 					break;
 				case "L":
-					//list appliances code here
+					//TODO: list appliances code here
+
 					break;
 				case "F":
 					//read appliances from a file code here
@@ -86,7 +88,7 @@ class AppClient{
 					System.out.println("Appliances from the file have been added to the list!");
 					break;
 				case "S":
-					//start the simulation code here
+					//TODO: start the simulation code here
 					break;
 				case "Q":
 					//quit the program
@@ -104,34 +106,19 @@ class AppClient{
 		
 	}
 
-	private void addAppliance(Scanner scan, ArrayList<Appliance> appliances) {
+	private void addApp(Scanner scan, ArrayList<Appliance> appliances) {
 		System.out.println("Enter appliance details: ");
 		try {
 
 			//Validate Location ID - Colin
-			String locationID;
+			int locationID;
 			while (true) {
-				System.out.println("Enter the location ID of the appliance (8-digit ID): ");
-				locationID = scan.nextLine();
-				
-				if (locationID == null || locationID.length() != 8) {
-					System.out.println("Location ID must be exactly 8 characters long.");
-					continue;
-				}
-
-				boolean isValid = true;
-				for (int i = 0; i < locationID.length(); i++) {
-					if (!Character.isDigit(locationID.charAt(i))) {
-						System.out.println("Location ID must contain only digits.");
-						isValid = false;
-						break;
-					}
-				}
-
-				if (isValid) {
+				locationID = readIntegerInput(scan, "Enter the location ID of the appliance (8-digit number): ");
+				if (locationID >= 10000000 && locationID <= 99999999) {
 					break;
+				} else {
+					System.out.println("Location ID must be an 8-digit number.");
 				}
-
 			}
 
 			//Validate appliance name - Colin
@@ -169,32 +156,53 @@ class AppClient{
 			}
 
 			//Validate Appliance Type - Colin
-			boolean appType = readBooleanInput(scan, "Enter appliance type (smart: true, not_smart: false): ");
+			boolean appType = readBooleanInput(scan, "Enter appliance type (true: smart, false: regular): ");
 			
 			//Validate Power Reduction - Colin
-			float lowPower;
+			float lowPowerRF;
 			while (true) {
 				if (appType) {
-					lowPower = readFloatInput(scan, "Enter the percentage reduction of power when appliance is turned to 'LOW' state (0 < x < 1): ");
-					if (lowPower >= 0.0 && lowPower <= 1.0) {
+					lowPowerRF = readFloatInput(scan, "Enter the percentage reduction of power when appliance is turned to 'LOW' state (0 < x < 1): ");
+					if (lowPowerRF >= 0.0 && lowPowerRF <= 1.0) {
 						break;
 					} else {
 						System.out.println("Power reduction must be between 0 and 1.");
 					}
 				} else {
-					lowPower = 0.0f;
+					lowPowerRF = 0.0f;
 					break;
 				}
 			}
 
 			//Create and Add new Appliance to appliance list - Colin
-			Appliance newAppliance = new Appliance(locationID, appName, onPower, probOn, appType, lowPower);
+			Appliance newAppliance = new Appliance(locationID, appName, onPower, probOn, appType, lowPowerRF);
 			appliances.add(newAppliance);
-			System.out.println("A new appliance has been added to the list!");
+			System.out.println("A new appliance has been added to the list! Appliance ID: " + newAppliance.getAppID());
 		} catch (NumberFormatException e) {
 			System.out.println("Invalid number format encountered. Returning to menu.");
 		} catch (ArrayIndexOutOfBoundsException e) {
 			System.out.println("Invalid input format. Returning to menu.");
+		}
+	}
+
+	private void delApp(Scanner scan, ArrayList<Appliance> appliances) {
+		System.out.println("Enter the ID of the appliance you would like to delete (8-digits): ");
+		int target = scan.nextInt();
+		boolean isRemoved = false;
+		int i = 0;
+		while (i < appliances.size()) {
+			if (appliances.get(i).getAppID() == target) {
+				appliances.remove(i);
+				isRemoved = true;
+				break;
+			}
+			++i;
+		}
+
+		if (isRemoved) {
+			System.out.println("Appliance was deleted.");
+		} else {
+			System.out.println("Appliance not found.");
 		}
 	}
 
