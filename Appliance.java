@@ -1,3 +1,5 @@
+import java.util.Comparator;
+
 public class Appliance {
 
     private String appName;
@@ -63,42 +65,6 @@ public class Appliance {
 
     /* SETTER METHODS */
 
-    public void setAppName(String appName) {
-        this.appName = appName;
-    }
-
-    // appID has no setter method since it is a constant variable
-
-    public void setLocationID(int myLocationID) { // is this method needed? when are we changing locationID
-        if (isIDValid(myLocationID)) {
-            this.locationID = myLocationID;
-        } else {
-            System.out.println("Invalid Location ID. It must be an 8-digit number.");
-        }
-    }
-    
-    public void setOnPower(int onPower) { // is this method needed? when are we changing an appliance's wattage
-        this.onPower = onPower;
-    }
-
-    public void setProbOn(float probOn) { // is this method needed? why would we change the probability of an appliance turning on
-        this.probOn = probOn;
-    }
-
-    public void setLowPowerRF(float myLowPowerRF) { // is this method needed? why would we change an appliance's power efficiency
-        this.lowPowerRF = myLowPowerRF;
-    }
-
-    public void setAppType(boolean appType) { // is this method needed? when would a method ever go from a smart appliance to a regular appliance, vice versa
-        this.appType = appType;
-        // recalculate lowPower if appType is changed
-        if (this.appType && this.lowPowerRF > 0) {
-            this.lowPower = this.onPower * (1 - this.lowPowerRF);
-        } else {
-            this.lowPower = 0.0f;
-        }
-    }
-
     public void setState(String myState) { // need this method to change state during simulation
         if (myState.equals("ON") || myState.equals("OFF") || (myState.equals("LOW") && this.isSmart())) {
             this.state = myState;
@@ -108,6 +74,8 @@ public class Appliance {
             this.state = "OFF";
         }
     }
+
+    /* OTHER METHODS */
 
     public float getPowerConsumption() { // need this method to get power consumption during simulation
         switch (this.state) {
@@ -124,13 +92,38 @@ public class Appliance {
         }
     }
 
-    private boolean isIDValid(int myID) { // is this method needed? its only used when changing an ID
-        // Check if the ID is 8 digits
-        return (myID >= 10000000 && myID <= 99999999);
+    public float getPowerChange() { // need this method to get power consumption during simulation
+        return (float) (this.onPower - this.lowPower);
     }
 
     public void printInfo() {
         System.out.printf("|   %-8d   |   %-8d   | %-50s  | %7d | %14.4f | %-6b | %26.2f |\n", 
         this.appID, this.locationID, this.appName, this.onPower, this.probOn, this.appType, this.lowPowerRF);
+    }
+
+    // Comparator for sorting the list by ON state first and then OnPower descending
+    public static Comparator<Appliance> firstSort = 
+        Comparator
+        .comparing(Appliance::getState) // Sort by states in ascending order so LOW, then OFF, then ON
+        .reversed() // reverse to have ON come first
+        .thenComparing(
+            Comparator
+            .comparing(Appliance::isSmart) // then sort by smart appliance
+            .reversed()) // Sort by so smart appliance (true: 1) shows up first
+            .thenComparing(
+                Comparator
+                .comparingInt(Appliance::getOnPower) // then sort by onPower
+                .reversed()); // Sort by onPower in descending order
+
+    public static Comparator<Appliance> location = Comparator.comparingInt(Appliance::getLocationID); // Sort by location in ascending order
+
+    @Override
+    public String toString() {
+ 
+        return "[ appID=" + appID + ", locationID="
+               + locationID + ", appName=" + appName
+                + ", onPower=" + onPower + ", probOn="
+                 + probOn + ", appType=" + appType + 
+                 ", lowPowerRF=" + lowPowerRF + "]";
     }
 }

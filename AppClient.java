@@ -3,8 +3,13 @@
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.InputMismatchException;
+import java.util.Map;
+import java.util.Random;
 import java.util.Scanner;
+import java.util.Set;
 
 class AppClient{
 	
@@ -39,6 +44,7 @@ class AppClient{
 					System.out.println("Invalid number format encountered. Skipping this line.");
 				}
 			}
+			System.out.println("Appliances from the file have been added to the list!");
 		}catch(IOException ioe){ 
 			System.out.println("The file can not be read");
 		}finally{
@@ -48,7 +54,6 @@ class AppClient{
 		}
 	}
 	
-	
 	public static void main(String []args){
 		
 		AppClient app = new AppClient();
@@ -57,6 +62,7 @@ class AppClient{
 		ArrayList<Appliance> appliances = new ArrayList<>();
 
 		Scanner scan = new Scanner(System.in);
+
 		while(true){// Application menu to be displayed to the user.
 			System.out.println("Select an option:");
 			System.out.println("Type \"A\" Add an appliance");
@@ -65,7 +71,9 @@ class AppClient{
 			System.out.println("Type \"F\" Read Appliances from a file");
 			System.out.println("Type \"S\" To Start the simulation");
 			System.out.println("Type \"Q\" Quit the program");
-			option1=scan.nextLine();
+			option1 = scan.nextLine().trim();
+			System.out.println("User input: [" + option1 + "]");  // Debugging line
+
 			/* Complete the skeleton code below */
 			switch(option1) { //menu switch case - Colin
 				case "A":
@@ -78,37 +86,202 @@ class AppClient{
 					break;
 				case "L":
 					//list appliances code here - Colin
-					System.out.printf("| Appliance ID | Location ID  | Appliance Name                                      | Wattage | On Probability |  Type  | Low Power Reduction Factor |\n");
-					System.out.printf("|---------------------------------------------------------------------------------------------------------------------------------------------------|\n");
-					for (Appliance appliance : appliances) {
-						appliance.printInfo();
-					}
-
+					app.listApps(appliances); //turned this section into a method for readability
 					break;
 				case "F":
 					//read appliances from a file code here - Colin
 					System.out.println("Enter path to file you would like to read: ");
 					String fileName = scan.nextLine();
 					app.readAppFile(fileName, appliances);
-					System.out.println("Appliances from the file have been added to the list!");
 					break;
 				case "S":
 					//TODO: start the simulation code here
+					int totalAllowablePower;
+					while(true){ // Input for total power of simulation
+						totalAllowablePower = readIntegerInput(scan, "Enter total allowable wattage for simulation: ");
+						if (totalAllowablePower > 0) {
+							break;
+						}
+					}
+					
+					int numSteps;
+					while (true) {
+						numSteps = readIntegerInput(scan, "Enter the number of steps you would like to run the simulation for: ");
+						if (numSteps > 0) {
+							break;
+						}
+					}
+					
+					int seed;
+					String answer;
+					String seedString;
+					do {
+						answer = readStringInput(scan, "Do you want a set seed (y/n)?");
+					} while(!answer.equals("y") && !answer.equals("n"));
+					Random rand;
+					if (answer.equals("y")) {
+						seed = readIntegerInput(scan, "Enter seed for random number generator: ");
+						rand = new Random(seed);
+						seedString = String.valueOf(seed);
+					}
+					else {
+						rand = new Random();
+						seedString = "none";
+					}
+
+					// create hashmap of appliance count for each room
+					HashMap<Integer, Integer> applianceOnOrLowCount = new HashMap<>();
+					ArrayList<Map.Entry<Integer, Integer>> applianceOnOrLowCountList;
+					int[] applianceOnCount = new int[numSteps];
+					int[] applianceLowCount = new int[numSteps];
+					int[] numBrownOuts = new int[numSteps];
+					float totalPowerConsumed;
+
+// start loop here	
+					for (int currStep = 0; currStep < numSteps; ++currStep) {
+						totalPowerConsumed = 0.0f;
+						
+						// initialize or reset counts for each room
+						for (Appliance appliance : appliances) {
+							int roomID = appliance.getLocationID();
+							applianceOnOrLowCount.put(roomID, 0);
+						}
+
+						// randomly turn on appliances each step and increment count if ON
+						for (Appliance appliance : appliances) {
+							float prob = rand.nextFloat();
+							if (appliance.getProbOn() < prob) {
+								appliance.setState("ON");
+							}
+							if (appliance.getState().equals("ON")){
+								++applianceOnCount[currStep];
+							}
+						}
+
+						// calculate total power consumption
+						for (Appliance appliance : appliances) {
+							totalPowerConsumed += appliance.getPowerConsumption(); // add wattage to total power consumption
+						}
+						System.out.println(totalPowerConsumed);
+
+						// sort appliances list by "ON" smart appliances then by wattage descending
+						appliances.sort(Appliance.firstSort);
+						
+						applianceLowCount[currStep] = 0; // number of smart appliances turned to LOW
+
+						boolean startBrownOut = false;
+						while (totalPowerConsumed > totalAllowablePower) { 
+							for (Appliance appliance : appliances) { // iterate through appliances
+								String currState = appliance.getState();
+								if (!appliance.isSmart() || currState.equals("OFF")) {
+									startBrownOut = true; // brown out starts when there only way left to decrease power consumption is by turning off appliances
+									break;
+								}
+								else { // set smart appliance to LOW, subtract power change from total power consumption
+									appliance.setState("LOW");
+									++applianceLowCount[currStep]; // increment number of appliances turned to LOW in this step
+									totalPowerConsumed -= appliance.getPowerChange();
+									if (totalPowerConsumed <= totalAllowablePower) { // check if total power consumption is less than or equal to allowable
+										break;
+									}
+								}
+							}
+							
+							// start counting the number of affected appliances per room
+							for (Appliance appliance : appliances) {
+								int roomID = appliance.getLocationID();
+								// increment count value for matching roomID of appliance if appliance is not OFF
+								if (!appliance.getState().equals("OFF")) {
+									applianceOnOrLowCount.put(roomID, applianceOnOrLowCount.get(roomID) + 1);
+								}
+							}
+		
+							// // i dont know how to sort a hashmap so we will take the keys and values of the hashmap and create a room object for each pair :-)
+							// Set<Map.Entry<Integer, Integer>> appOnCountSet = appOnCount.entrySet(); // entrySet() returns Set<Map.Entry<Integer, Integer>> so the we get a set of map entries from the hashmap
+							// // must turn the set into an array list because the set doesnt keep track of order but list can be sorted
+							// ArrayList<Map.Entry<Integer, Integer>> appOnCountList = new ArrayList<>(appOnCountSet);
+							// simplify the two lines to one line
+							applianceOnOrLowCountList = new ArrayList<>(applianceOnOrLowCount.entrySet());
+		
+							// sort the list of map entries of key: roomID and value: applianceCount by value ascending
+							applianceOnOrLowCountList.sort(Map.Entry.comparingByValue());
+		
+							// now we take the keys and values each map entry in our sorted list and put them into separate arrays we can use later
+							int[] sortedRoomIDs = new int[applianceOnOrLowCountList.size()];
+							int[] sortedCounts = new int[applianceOnOrLowCountList.size()];
+		
+							for (int i = 0; i < applianceOnOrLowCountList.size(); i++) {
+								Map.Entry<Integer, Integer> pair = applianceOnOrLowCountList.get(i);
+								sortedRoomIDs[i] = pair.getKey();
+								sortedCounts[i] = pair.getValue();
+							}
+
+							numBrownOuts[currStep] = 0;
+							if (startBrownOut) {
+								numBrownOuts[currStep] = app.startBrownOut(appliances, sortedRoomIDs, totalPowerConsumed, totalAllowablePower);
+								// for (int roomID : sortedRoomIDs) {
+
+								// 	// for all appliances with matching room ID, turn OFF
+								// 	for (Appliance appliance : appliances) {
+								// 		int targetID = appliance.getLocationID();
+								// 		if (targetID == roomID) {
+								// 			appliance.setState("OFF");
+								// 			// adjust total power consumed by subtracting power consumption of appliance
+								// 			totalPowerConsumed -= appliance.getPowerConsumption();
+								// 		}
+								// 	}
+								// 	++numBrownOuts[currStep]; // increment number of locations browned out
+						
+								// 	// check if power is below allowable if so, stop browning out and return number of brown outs
+								// 	if (totalPowerConsumed <= totalAllowablePower) {
+								// 		break;
+								// 	}
+								// }
+								break;
+							}
+						}
+
+						// For each time step, print to the screen, the number of smart appliances turned to “LOW” and the number of locations browned out
+						System.out.println("Number of appliances turned on: " + applianceOnCount[currStep]);
+						System.out.println("Number of appliances turned low: " + applianceLowCount[currStep]);
+						System.out.println("Number of locations turned off: " + numBrownOuts[currStep]);
+					}
+
+					System.out.println("Simulation seed: " + seedString);
+					System.out.println(Arrays.toString(applianceOnCount));
+					System.out.println(Arrays.toString(applianceLowCount));
+					System.out.println(Arrays.toString(numBrownOuts));
 					break;
+
 				case "Q":
 					//quit the program
-					break;
-				default:
-					System.out.println("Invalid option. Returning to menu.");
-					continue; //loop back for another attempt
+					System.out.println("Quiting the program.");
+					scan.close();
+					return;
+
+				// default:
+				// 	System.out.println("Invalid option. Returning to menu.");
 			}
-			if (option1.equals("Q")) {
-				break; //exits the while if user chooses to quit
-			}
-			
 		}
-		scan.close();
-		
+	}
+
+	// brown out handling - Colin
+	private int startBrownOut(ArrayList<Appliance> appliances, int[] sortedRoomIDs, float totalPowerConsumed, float totalAllowablePower) {
+		int numBrownOuts = 0;
+
+		for (int roomID : sortedRoomIDs) {
+			for (Appliance appliance : appliances) {
+				if (appliance.getLocationID() == roomID) {
+					appliance.setState("OFF");
+					totalPowerConsumed -= appliance.getPowerConsumption();
+				}
+			}
+			numBrownOuts++;
+			if (totalPowerConsumed <= totalAllowablePower) {
+				break;
+			}
+		}
+		return numBrownOuts;
 	}
 
 	// add appliance - Colin
@@ -213,6 +386,15 @@ class AppClient{
 		}
 	}
 
+	// list appliances - Colin
+	private void listApps(ArrayList<Appliance> appliances) {
+		System.out.printf("| Appliance ID | Location ID  | Appliance Name                                      | Wattage | On Probability |  Type  | Low Power Reduction Factor |\n");
+		System.out.printf("|---------------------------------------------------------------------------------------------------------------------------------------------------|\n");
+		for (Appliance appliance : appliances) {
+			appliance.printInfo();
+		}
+	}
+
 	// read input and validate integer type - Colin
 	private static int readIntegerInput(Scanner scnr, String prompt) {
 		int input = 0;
@@ -271,4 +453,10 @@ class AppClient{
 		return input;
 	}
 	
+	// read string type - Colin
+	private static String readStringInput(Scanner scnr, String prompt) {
+		System.out.println(prompt);
+		String input = scnr.nextLine().trim();
+		return input;
+	}
 }
