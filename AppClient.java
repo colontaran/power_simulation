@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.InputMismatchException;
 import java.util.Map;
@@ -94,7 +95,7 @@ class AppClient{
 					app.readAppFile(fileName, appliances);
 					break;
 				case "S":
-					//TODO: start the simulation code here
+// INPUT HANDLING
 					int totalAllowablePower;
 					while(true){ // Input for total power of simulation
 						totalAllowablePower = readIntegerInput(scan, "Enter total allowable wattage for simulation: ");
@@ -127,17 +128,27 @@ class AppClient{
 						rand = new Random();
 						seedString = "none";
 					}
-
-					// create hashmap of appliance count for each room
+					System.out.println();
+// INITIALIZE
+					// create hashmap of appliance count for each room for each step
 					HashMap<Integer, Integer> applianceOnOrLowCount = new HashMap<>();
+					// create hashmap to track number of brown outs at each location for entire simulation
+					HashMap<Integer, Integer> affectedLocations = new HashMap<>();
 					ArrayList<Map.Entry<Integer, Integer>> applianceOnOrLowCountList;
 					int[] applianceOnCount = new int[numSteps];
 					int[] applianceLowCount = new int[numSteps];
 					int[] numBrownOuts = new int[numSteps];
 					float totalPowerConsumed;
 
+					// initalize affected locaitons to 0
+					for (Appliance appliance : appliances) {
+						int roomID = appliance.getLocationID();
+						affectedLocations.put(roomID, 0);
+					}
+
 // start loop here	
 					for (int currStep = 0; currStep < numSteps; ++currStep) {
+						System.out.println("Step " + (currStep + 1) + ": ");
 						totalPowerConsumed = 0.0f;
 						
 						// initialize or reset counts for each room
@@ -197,7 +208,7 @@ class AppClient{
 								}
 							}
 		
-							// // i dont know how to sort a hashmap so we will take the keys and values of the hashmap and create a room object for each pair :-)
+							// // i dont know how to directly sort a hashmap so we will take the keys and values of the hashmap and create a room object for each pair :-)
 							// Set<Map.Entry<Integer, Integer>> appOnCountSet = appOnCount.entrySet(); // entrySet() returns Set<Map.Entry<Integer, Integer>> so the we get a set of map entries from the hashmap
 							// // must turn the set into an array list because the set doesnt keep track of order but list can be sorted
 							// ArrayList<Map.Entry<Integer, Integer>> appOnCountList = new ArrayList<>(appOnCountSet);
@@ -219,7 +230,7 @@ class AppClient{
 
 							numBrownOuts[currStep] = 0;
 							if (startBrownOut) {
-								numBrownOuts[currStep] = app.startBrownOut(appliances, sortedRoomIDs, totalPowerConsumed, totalAllowablePower);
+								numBrownOuts[currStep] = app.startBrownOut(appliances, affectedLocations, sortedRoomIDs, totalPowerConsumed, totalAllowablePower);
 								
 								// for (int roomID : sortedRoomIDs) {
 
@@ -240,24 +251,37 @@ class AppClient{
 								// 	}
 								// }
 								break;
-							} else {
-								System.out.println();
-								break;
 							}
 						}
 
 						// For each time step, print to the screen, the number of smart appliances turned to “LOW” and the number of locations browned out
 						System.out.println("Number of appliances turned on: " + applianceOnCount[currStep]);
 						System.out.println("Number of appliances turned low: " + applianceLowCount[currStep]);
-						System.out.println("Number of locations turned off: " + numBrownOuts[currStep]);
+						System.out.println("Number of locations browned out: " + numBrownOuts[currStep]);
 						System.out.println();
 					}
 
 					System.out.println("Simulation seed: " + seedString);
+					System.out.println("Total allowed power: " + totalAllowablePower);
 					System.out.println(Arrays.toString(applianceOnCount));
 					System.out.println(Arrays.toString(applianceLowCount));
 					System.out.println(Arrays.toString(numBrownOuts));
 					System.out.println();
+
+					// find max effected location - Colin
+					int maxBrownOuts = Collections.max(affectedLocations.values()); // values() returns a Collection of values from map
+					ArrayList<Integer> maxLocations = new ArrayList<>(); // maxLocations is a list instead of an int in case of multiple max values
+					for (Map.Entry<Integer, Integer> entry : affectedLocations.entrySet()) {
+						int value = entry.getValue();
+						if (value == maxBrownOuts) {
+							maxLocations.add(entry.getKey());
+						}
+					}
+					Collections.sort(maxLocations);
+					System.out.println("Max effected location(s): " + maxLocations);
+
+					//TODO: write appliances/locations that were affected during each interval
+					//use appliance IDs and location IDs
 					break;
 
 				case "Q":
@@ -273,7 +297,7 @@ class AppClient{
 	}
 
 	// brown out handling - Colin
-	private int startBrownOut(ArrayList<Appliance> appliances, int[] sortedRoomIDs, float totalPowerConsumed, float totalAllowablePower) {
+	private int startBrownOut(ArrayList<Appliance> appliances, HashMap<Integer, Integer> affectedLocations, int[] sortedRoomIDs, float totalPowerConsumed, float totalAllowablePower) {
 		int numBrownOuts = 0;
 		for (int roomID : sortedRoomIDs) {
 			for (Appliance appliance : appliances) {
@@ -282,13 +306,14 @@ class AppClient{
 					appliance.setState("OFF");
 				}
 			}
+			// for a brown out, increment the count of the roomID in affectedLocations
+			affectedLocations.put(roomID, affectedLocations.get(roomID) + 1);
 			++numBrownOuts;
 			if (totalPowerConsumed <= totalAllowablePower) {
 				break;
 			}
 		}
 		System.out.println("Total power consumption after brown out: " + totalPowerConsumed);
-		System.out.println();
 		return numBrownOuts;
 	}
 
