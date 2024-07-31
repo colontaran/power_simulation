@@ -9,7 +9,6 @@ import java.util.InputMismatchException;
 import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
-import java.util.Set;
 
 class AppClient{
 	
@@ -148,9 +147,10 @@ class AppClient{
 						}
 
 						// randomly turn on appliances each step and increment count if ON
+						// float prob = rand.nextFloat(); // one prob for whole step (this one is bad, appliances with same ProbOn will turn on all together)
 						for (Appliance appliance : appliances) {
-							float prob = rand.nextFloat();
-							if (appliance.getProbOn() < prob) {
+							float prob = rand.nextFloat(); // or one prob for each appliance (more randomness to turning on appliances)
+							if (appliance.getProbOn() >= prob) {
 								appliance.setState("ON");
 							}
 							if (appliance.getState().equals("ON")){
@@ -162,7 +162,7 @@ class AppClient{
 						for (Appliance appliance : appliances) {
 							totalPowerConsumed += appliance.getPowerConsumption(); // add wattage to total power consumption
 						}
-						System.out.println(totalPowerConsumed);
+						System.out.println("Total power consumption after turning ON: " + totalPowerConsumed);
 
 						// sort appliances list by "ON" smart appliances then by wattage descending
 						appliances.sort(Appliance.firstSort);
@@ -186,6 +186,7 @@ class AppClient{
 									}
 								}
 							}
+							System.out.println("Total power consumption after turning LOW: " + totalPowerConsumed);
 							
 							// start counting the number of affected appliances per room
 							for (Appliance appliance : appliances) {
@@ -219,6 +220,7 @@ class AppClient{
 							numBrownOuts[currStep] = 0;
 							if (startBrownOut) {
 								numBrownOuts[currStep] = app.startBrownOut(appliances, sortedRoomIDs, totalPowerConsumed, totalAllowablePower);
+								
 								// for (int roomID : sortedRoomIDs) {
 
 								// 	// for all appliances with matching room ID, turn OFF
@@ -238,6 +240,9 @@ class AppClient{
 								// 	}
 								// }
 								break;
+							} else {
+								System.out.println();
+								break;
 							}
 						}
 
@@ -245,12 +250,14 @@ class AppClient{
 						System.out.println("Number of appliances turned on: " + applianceOnCount[currStep]);
 						System.out.println("Number of appliances turned low: " + applianceLowCount[currStep]);
 						System.out.println("Number of locations turned off: " + numBrownOuts[currStep]);
+						System.out.println();
 					}
 
 					System.out.println("Simulation seed: " + seedString);
 					System.out.println(Arrays.toString(applianceOnCount));
 					System.out.println(Arrays.toString(applianceLowCount));
 					System.out.println(Arrays.toString(numBrownOuts));
+					System.out.println();
 					break;
 
 				case "Q":
@@ -268,19 +275,20 @@ class AppClient{
 	// brown out handling - Colin
 	private int startBrownOut(ArrayList<Appliance> appliances, int[] sortedRoomIDs, float totalPowerConsumed, float totalAllowablePower) {
 		int numBrownOuts = 0;
-
 		for (int roomID : sortedRoomIDs) {
 			for (Appliance appliance : appliances) {
 				if (appliance.getLocationID() == roomID) {
-					appliance.setState("OFF");
 					totalPowerConsumed -= appliance.getPowerConsumption();
+					appliance.setState("OFF");
 				}
 			}
-			numBrownOuts++;
+			++numBrownOuts;
 			if (totalPowerConsumed <= totalAllowablePower) {
 				break;
 			}
 		}
+		System.out.println("Total power consumption after brown out: " + totalPowerConsumed);
+		System.out.println();
 		return numBrownOuts;
 	}
 
