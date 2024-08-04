@@ -104,7 +104,7 @@ class AppClient{
 					break;
 				case "F":
 					//read appliances from a file code here - Colin
-					System.out.println("Enter path to file you would like to read: ");
+					System.out.println("Enter path to file you would like to read (use forward slashes '/' or double backslashes '\\\\'): ");
 					String fileName = scan.nextLine();
 					app.readAppFile(fileName, appliances);
 					break;
