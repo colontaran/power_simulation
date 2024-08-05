@@ -25,8 +25,6 @@ How to Execute:
    - Type "S" to start the simulation.
    - Type "Q" to quit the program.
 
-4. When selecting to read appliances from a file, use forward slashes '/' or double backslashes '\\' in the file path.
-
 How to Generate a List of Appliances:
 =====================================
 1. Compile the program using the following command:

@@ -101,6 +101,11 @@ public class Appliance {
         this.appID, this.locationID, this.appName, this.onPower, this.probOn, this.appType, this.lowPowerRF);
     }
 
+    public void printUserAddedAppInfo(String newAppId, int newLocationID, String newAppName, int newOnPower, float newProbOn, boolean newAppType, float newLowPowerRF) {
+        System.out.printf("|   %-8d   |   %-8d   | %-50s  | %7d | %14.4f | %-6b | %26.2f |\n", 
+        newAppId, newLocationID, newAppName, newOnPower, newProbOn, newAppType, newLowPowerRF);
+    }
+
     // Comparator for sorting the list by ON state first and then OnPower descending
     public static Comparator<Appliance> firstSort = 
         Comparator

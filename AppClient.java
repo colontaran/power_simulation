@@ -104,7 +104,7 @@ class AppClient{
 					break;
 				case "F":
 					//read appliances from a file code here - Colin
-					System.out.println("Enter path to file you would like to read (use forward slashes '/' or double backslashes '\\\\'): ");
+					System.out.println("Enter path to file you would like to read: ");
 					String fileName = scan.nextLine();
 					app.readAppFile(fileName, appliances);
 					break;
@@ -154,24 +154,34 @@ class AppClient{
 						seedString = "none";
 					}
 					System.out.println();
+
 	// INITIALIZE
 					float[][] totalPowerConsumedTracker = new float[numSteps][3]; // store in nested array [][0] is value after turning on, and [][1] is value after turning low, and [][2]] is value after browning out
 					HashMap<Integer, Integer> locationsOnOrLow = new HashMap<>(); // track number of appliances that are in use in each location
-					HashMap<Integer, Integer> affectedLocations = new HashMap<>(); // track number of brown outs at each location for entire simulation
 					ArrayList<Map.Entry<Integer, Integer>> locationsOnOrLowList;
 					int[] totalAppliancesOn = new int[numSteps];
 					int[] appliancesTurnedOn = new int[numSteps];
+					ArrayList<ArrayList<Integer>> affectedAppliancesOn = new ArrayList<ArrayList<Integer>>(numSteps);
 					int[] totalAppliancesLow = new int[numSteps];
 					int[] appliancesTurnedLow = new int[numSteps];
+					ArrayList<ArrayList<Integer>> affectedAppliancesLow = new ArrayList<ArrayList<Integer>>(numSteps);
 					int[] totalAppliancesOff = new int[numSteps];
 					int[] appliancesTurnedOff = new int[numSteps];
+					ArrayList<ArrayList<Integer>> affectedAppliancesOff = new ArrayList<ArrayList<Integer>>(numSteps);
+					HashMap<Integer, Integer> affectedLocations = new HashMap<>(); // track number of brown outs at each location for entire simulation
 					int[] numBrownOuts = new int[numSteps];
+
+					for (int i = 0; i < numSteps; i++) {
+						affectedAppliancesOn.add(new ArrayList<>());
+						affectedAppliancesLow.add(new ArrayList<>());
+						affectedAppliancesOff.add(new ArrayList<>());
+					}
 
 					// initialize totalPowerConsumedTracker to 0.0f
 					FileOutputStream dataStream = null;
 					PrintWriter dataWriter = null;
 					try {
-						dataStream = new FileOutputStream("powerSimulationData.txt");
+						dataStream = new FileOutputStream("powerSimulationData.csv");
 						dataWriter = new PrintWriter(dataStream);
 						for (int i = 0; i < numSteps; ++i) {
 							totalPowerConsumedTracker[i][0] = 0.0f;
@@ -183,13 +193,12 @@ class AppClient{
 							int roomID = appliance.getLocationID();
 							affectedLocations.put(roomID, 0);
 						}
-
 		// start loop here	
 						for (int currStep = 0; currStep < numSteps; ++currStep) {
 						// reset brownout boolean
 							boolean startBrownOut = false;
 						// initialize or reset appliance counts for each step
-							System.out.println("Step " + currStep + ":");
+							
 							for (Appliance appliance : appliances) {
 								int roomID = appliance.getLocationID();
 								locationsOnOrLow.put(roomID, 0);
@@ -202,6 +211,7 @@ class AppClient{
 								if (probOn >= randFloat && !appliance.getState().equals("ON")) {
 									appliance.setState("ON");
 									++appliancesTurnedOn[currStep];
+									affectedAppliancesOn.get(currStep).add(appliance.getAppID());
 								}
 							}
 
@@ -226,6 +236,7 @@ class AppClient{
 									else { // set smart appliance to LOW, subtract power change from total power consumption
 										appliance.setState("LOW");
 										++appliancesTurnedLow[currStep]; // increment number of appliances turned to LOW in this step
+										affectedAppliancesLow.get(currStep).add(appliance.getAppID());
 										totalPowerConsumedTracker[currStep][1] -= appliance.getPowerChange();
 										if (totalPowerConsumedTracker[currStep][1] <= totalAllowablePower) { // check if total power consumption is less than or equal to allowable
 											totalPowerConsumedTracker[currStep][2] = totalPowerConsumedTracker[currStep][1];
@@ -264,7 +275,7 @@ class AppClient{
 
 								totalPowerConsumedTracker[currStep][2] = totalPowerConsumedTracker[currStep][1];
 								if (startBrownOut) {
-									numBrownOuts[currStep] = app.startBrownOut(currStep, appliances, affectedLocations, totalPowerConsumedTracker, appliancesTurnedOff, sortedRoomIDs, totalAllowablePower);
+									numBrownOuts[currStep] = app.startBrownOut(currStep, appliances, affectedLocations, affectedAppliancesOff, totalPowerConsumedTracker, appliancesTurnedOff, sortedRoomIDs, totalAllowablePower);
 								}
 							}
 
@@ -279,6 +290,8 @@ class AppClient{
 								}
 
 							}
+	
+
 						}
 					}
 					catch (FileNotFoundException e) {
@@ -287,11 +300,10 @@ class AppClient{
 					}
 					finally {
 						if (dataWriter != null) {
-							dataWriter.close();
+							//dataWriter.close();
 						}
 					}
 
-					
 					for (int i = 0; i < numSteps; ++i) {
 						int step = i + 1;
 						System.out.printf("STEP %d:\n", step);
@@ -334,6 +346,51 @@ class AppClient{
 					System.out.println("Simulation seed: " + seedString);
 					System.out.println("Total allowed power: " + totalAllowablePower);
 
+
+					//TODO Write file - Destiny 
+					// Write user inputs - Destiny 
+					dataWriter.println("User inputs:,Total Allowable Power:,Number of Time Steps:,Chosen Seed:");
+					dataWriter.println(" ," + totalAllowablePower + "," + numSteps + "," + seedString);
+					dataWriter.println();
+
+					//write other info - Destiny 
+					dataWriter.print("Max Affected Locations,");
+					for (int i = 0; i < maxLocations.size(); ++i) {
+						int listElement = maxLocations.get(i); 
+						dataWriter.print(listElement + ","); 
+					} 
+					dataWriter.println();
+
+					//write time steps - Destiny 
+					dataWriter.print("Time Step,");
+					for (int i = 0; i < numSteps; ++i) {
+						int step = i + 1;
+						dataWriter.print(step + ","); 
+					} 
+					dataWriter.println();
+					//write program outputs using overloaded methods - Destiny 
+					dataWriter.println(printArray("App Turned On", appliancesTurnedOn, numSteps));
+					dataWriter.println(printArray("App Turned Low", appliancesTurnedLow, numSteps));
+					dataWriter.println(printArray("App Turned off", appliancesTurnedOff, numSteps));
+					dataWriter.println(printArray("Total App On", totalAppliancesOn, numSteps));
+					dataWriter.println(printArray("Total App Low", totalAppliancesLow, numSteps));
+					dataWriter.println(printArray("Total App Off", totalAppliancesOff, numSteps));
+					dataWriter.println(printArray("Total Power after On", totalPowerConsumedTracker, numSteps, 0));
+					dataWriter.println(printArray("Total Power after Low", totalPowerConsumedTracker, numSteps, 1));
+					dataWriter.println(printArray("Total Power after Brown", totalPowerConsumedTracker, numSteps, 2));
+					dataWriter.println(printArray("Locations Browned out", numBrownOuts, numSteps));
+					dataWriter.println();
+					for (int j = 0; j < numSteps; j++) {
+						dataWriter.println();
+						dataWriter.println("Step " + (j + 1) + ": ");
+						dataWriter.println("Appliances Turned On: " + affectedAppliancesOn.get(j));
+						dataWriter.println("Appliances Turned Low: " + affectedAppliancesLow.get(j));
+						dataWriter.println("Appliances Turned Off: " + affectedAppliancesOff.get(j));
+					}
+					
+					dataWriter.close();
+					
+
 //TODO: write appliances/locations that were affected during each interval
 					//use appliance IDs and location IDs
 					
@@ -350,8 +407,38 @@ class AppClient{
 		}
 	}
 
+	// create output string - Destiny 
+	public static String printArray(String title, int[] intArray, int timeSteps){
+		String outputString = title + ","; 
+		for (int i = 0; i < timeSteps; ++i) {
+			outputString += intArray[i]; 
+			outputString += ","; 
+		}
+		return outputString; 
+		
+	}
+	public static String printArray(String title, float[] floatArray, int timeSteps){
+		String outputString = title + ","; 
+		for (int i = 0; i < timeSteps; ++i) {
+			outputString += floatArray[i]; 
+			outputString += ","; 
+		}
+		return outputString; 
+		
+	}
+	public static String printArray(String title, float[][] floatArray, int timeSteps, int arrayIndex){
+		String outputString = title + ","; 
+		for (int i = 0; i < timeSteps; ++i) {
+			int j = arrayIndex; 
+			outputString += floatArray[i][j]; 
+			outputString += ","; 
+		}
+		return outputString; 
+		
+	}
+
 	// brown out handling - Colin
-	private int startBrownOut(int currStep, ArrayList<Appliance> appliances, HashMap<Integer, Integer> affectedLocations, 
+	private int startBrownOut(int currStep, ArrayList<Appliance> appliances, HashMap<Integer, Integer> affectedLocations, ArrayList<ArrayList<Integer>> affectedAppliancesOff,
 	float[][] totalPowerConsumedTracker, int[] appliancesTurnedOff, int[] sortedRoomIDs, float totalAllowablePower) {
 		int numBrownOuts = 0;
 		for (int roomID : sortedRoomIDs) {
@@ -360,6 +447,7 @@ class AppClient{
 					totalPowerConsumedTracker[currStep][2] -= appliance.getPowerConsumption();
 					appliance.setState("OFF");
 					++appliancesTurnedOff[currStep];
+					affectedAppliancesOff.get(currStep).add(appliance.getAppID());
 				}
 			}
 			// for a brown out, increment the count of the roomID in affectedLocations
@@ -372,85 +460,150 @@ class AppClient{
 		return numBrownOuts;
 	}
 
-	// add appliance - Colin
+	// add appliance - Colin, Quit at any Line - Destiny
 	private void addApp(Scanner scan, ArrayList<Appliance> appliances) {
 		System.out.println("Enter appliance details: ");
 		try {
 
-			//Validate Location ID - Colin
+			//Validate Location ID - Colin, quit - Destiny 
 			int locationID;
 			while (true) {
-				locationID = readIntegerInput(scan, "Enter the location ID of the appliance (8-digit number): ");
+				locationID = readIntegerInput(scan, "Enter the location ID of the appliance (8-digit number) or (-1 to quit): ");
 				if (locationID >= 10000000 && locationID <= 99999999) {
 					break;
-				} else {
+				}
+				else if (locationID == -1) {
+					return;
+				} 
+				else {
 					System.out.println("Location ID must be an 8-digit number.");
 				}
 			}
 
-			//Validate appliance name - Colin
+			//Validate appliance name - Colin, quit - Destiny 
 			String appName;
 			while (true) {
-				System.out.println("Enter the name of the appliance: ");
+				System.out.println("Enter the name of the appliance or (Q to quit): ");
 				appName = scan.nextLine();
-				if (appName != null && !appName.trim().isEmpty()) { //trim removes all leading and trailing spaces, then isEmpty checks if the string is ""
+				if (appName != null && !appName.trim().isEmpty() && !appName.equals("Q")) { //trim removes all leading and trailing spaces, then isEmpty checks if the string is ""
 					break;
-				} else {
+				} 
+				else if (appName.equals("Q")) {
+					return;
+				}
+				else {
 					System.out.println("Name cannot be null or empty.");
 				}
 			}
 
-			//Validate Power Used - Colin
+			//Validate Power Used - Colin, quit - Destiny 
 			int onPower;
 			while (true) {
-				onPower = readIntegerInput(scan, "Enter the power used by the appliance in the 'ON' state (>0): ");
+				onPower = readIntegerInput(scan, "Enter the power used by the appliance in the 'ON' state (>0) or (-1 to quit): ");
 				if (onPower > 0) {
 					break;
-				} else {
+				}
+				else if (onPower == -1) {
+					return;
+				} 
+				else {
 					System.out.println("Power must be greater than 0.");
 				}
 			}
 
-			//Validate Probability of Turning On - Colin
+			//Validate Probability of Turning On - Colin, quit Destiny
 			float probOn;
 			while (true) {
-				probOn = readFloatInput(scan, "Enter the probability of appliance turning on (0 < x < 1): ");
+				probOn = readFloatInput(scan, "Enter the probability of appliance turning on (0 < x < 1) or (-1 to quit): ");
 				if (probOn >= 0.0 && probOn <= 1.0) {
 					break;
-				} else {
+				}
+				else if (probOn == -1) {
+					return;
+				}
+				else {
 					System.out.println("Probability must be between 0 and 1.");
 				}
 			}
 
 			//Validate Appliance Type - Colin
-			boolean appType = readBooleanInput(scan, "Enter appliance type (true: smart, false: regular): ");
+			boolean appType;
+			while (true) {
+                System.out.println("Is the appliance a smart appliance? (true/false) or (Q to quit): ");
+                String typeInput = scan.nextLine().trim().toLowerCase();
+                if (typeInput.equals("true") || typeInput.equals("false")) {
+                    appType = Boolean.parseBoolean(typeInput);
+                    break;
+                } else if (typeInput.equals("q")) {
+                    return;
+                } else {
+                    System.out.println("Invalid input. Please enter 'true' or 'false'.");
+                }
+            }
 			
-			//Validate Power Reduction - Colin
-			float lowPowerRF;
+			//Validate Power Reduction - Colin, quit - Destiny 
+			float lowPowerRF = 0.0f;
 			while (true) {
 				if (appType) {
-					lowPowerRF = readFloatInput(scan, "Enter the percentage reduction of power when appliance is turned to 'LOW' state (0 < x < 1): ");
+					lowPowerRF = readFloatInput(scan, "Enter the percentage reduction of power when appliance is turned to 'LOW' state (0 < x < 1) or (-1.0 to quit): ");
 					if (lowPowerRF >= 0.0 && lowPowerRF <= 1.0) {
 						break;
-					} else {
+					} 
+					else if (lowPowerRF == -1.0){
+						return;
+					}
+					else {
 						System.out.println("Power reduction must be between 0 and 1.");
 					}
-				} else {
+				} 
+				else {
 					lowPowerRF = 0.0f;
 					break;
 				}
 			}
-
-			//Create and Add new Appliance to appliance list - Colin
+			
+	
+			//Create and Add new Appliance to appliance list - Colin, print new appliance an offer option to delete it if incorrect - Destiny
 			Appliance newAppliance = new Appliance(locationID, appName, onPower, probOn, appType, lowPowerRF);
 			appliances.add(newAppliance);
 			System.out.println("A new appliance has been added to the list! Appliance ID: " + newAppliance.getAppID());
+			//print just added appliance and ask user if it is correct - Destiny 
+			System.out.printf("| Appliance ID | Location ID  | Appliance Name                                      | Wattage | On Probability |  Type  | Low Power Reduction Factor |\n");
+			System.out.printf("|====================================================================================================================================================|\n");
+			newAppliance.printInfo();
+			System.out.println();
+			boolean correctApp = readBooleanInput(scan, "Is this appliance correct? 'true' to add to list and 'false' to delete and return to main menu");
+			if (!correctApp){
+				delNewApp(newAppliance, appliances); 
+			}
+			
 		} catch (NumberFormatException e) {
 			System.out.println("Invalid number format encountered. Returning to menu.");
 		} catch (ArrayIndexOutOfBoundsException e) {
 			System.out.println("Invalid input format. Returning to menu.");
 		}
 	}
+
+		// delete just added appliance - Destiny modified Colin's delete appliance method
+		private void delNewApp(Appliance justAdded, ArrayList<Appliance> appliances) {
+			int target = justAdded.getAppID();
+			boolean isRemoved = false;
+			int i = 0;
+			while (i < appliances.size()) {
+				if (appliances.get(i).getAppID() == target) {
+					appliances.remove(i);
+					isRemoved = true;
+					break;
+				}
+				++i;
+			}
+	
+			if (isRemoved) {
+				System.out.println("Appliance was deleted.");
+			} else {
+				System.out.println("Appliance not found.");
+			}
+		}
 
 	// delete appliance - Colin
 	private void delApp(Scanner scan, ArrayList<Appliance> appliances) {
