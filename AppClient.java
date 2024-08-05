@@ -1,5 +1,3 @@
-/* This is a stub code. You can modify it as you wish. */
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -8,6 +6,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.InputMismatchException;
 import java.util.Map;
 import java.util.Random;
@@ -168,6 +167,7 @@ class AppClient{
 					int[] totalAppliancesOff = new int[numSteps];
 					int[] appliancesTurnedOff = new int[numSteps];
 					ArrayList<ArrayList<Integer>> affectedAppliancesOff = new ArrayList<ArrayList<Integer>>(numSteps);
+					ArrayList<HashSet<Integer>> affectedLocationsStep = new ArrayList<HashSet<Integer>>(numSteps);
 					HashMap<Integer, Integer> affectedLocations = new HashMap<>(); // track number of brown outs at each location for entire simulation
 					int[] numBrownOuts = new int[numSteps];
 
@@ -175,6 +175,7 @@ class AppClient{
 						affectedAppliancesOn.add(new ArrayList<>());
 						affectedAppliancesLow.add(new ArrayList<>());
 						affectedAppliancesOff.add(new ArrayList<>());
+						affectedLocationsStep.add(new HashSet<>());
 					}
 
 					// initialize totalPowerConsumedTracker to 0.0f
@@ -275,7 +276,7 @@ class AppClient{
 
 								totalPowerConsumedTracker[currStep][2] = totalPowerConsumedTracker[currStep][1];
 								if (startBrownOut) {
-									numBrownOuts[currStep] = app.startBrownOut(currStep, appliances, affectedLocations, affectedAppliancesOff, totalPowerConsumedTracker, appliancesTurnedOff, sortedRoomIDs, totalAllowablePower);
+									numBrownOuts[currStep] = app.startBrownOut(currStep, appliances, affectedLocations, affectedLocationsStep, affectedAppliancesOff, totalPowerConsumedTracker, appliancesTurnedOff, sortedRoomIDs, totalAllowablePower);
 								}
 							}
 
@@ -347,11 +348,34 @@ class AppClient{
 					System.out.println("Total allowed power: " + totalAllowablePower);
 
 
-					//TODO Write file - Destiny 
+					//Write file - Destiny 
 					// Write user inputs - Destiny 
 					dataWriter.println("User inputs:,Total Allowable Power:,Number of Time Steps:,Chosen Seed:");
 					dataWriter.println(" ," + totalAllowablePower + "," + numSteps + "," + seedString);
 					dataWriter.println();
+
+					for (ArrayList<Integer> innerList : affectedAppliancesOn) {
+						Collections.sort(innerList);
+					}
+					for (ArrayList<Integer> innerList : affectedAppliancesLow) {
+						Collections.sort(innerList);
+					}
+					for (ArrayList<Integer> innerList : affectedAppliancesOff) {
+						Collections.sort(innerList);
+					}
+
+
+					// write affected appliance and location ids for each step
+					for (int j = 0; j < numSteps; j++) {
+						dataWriter.println("Step " + (j + 1) + ": ");
+						dataWriter.println("Appliances Turned On: " + affectedAppliancesOn.get(j));
+						dataWriter.println("Appliances Turned Low: " + affectedAppliancesLow.get(j));
+						dataWriter.println("Appliances Turned Off: " + affectedAppliancesOff.get(j));
+						ArrayList<Integer> sortedAffectedLocationsStep = new ArrayList<>(affectedLocationsStep.get(j));
+						Collections.sort(sortedAffectedLocationsStep);
+						dataWriter.println("Locations Browned Out: " + sortedAffectedLocationsStep);
+						dataWriter.println();
+					}
 
 					//write other info - Destiny 
 					dataWriter.print("Max Affected Locations,");
@@ -379,21 +403,7 @@ class AppClient{
 					dataWriter.println(printArray("Total Power after Low", totalPowerConsumedTracker, numSteps, 1));
 					dataWriter.println(printArray("Total Power after Brown", totalPowerConsumedTracker, numSteps, 2));
 					dataWriter.println(printArray("Locations Browned out", numBrownOuts, numSteps));
-					dataWriter.println();
-					for (int j = 0; j < numSteps; j++) {
-						dataWriter.println();
-						dataWriter.println("Step " + (j + 1) + ": ");
-						dataWriter.println("Appliances Turned On: " + affectedAppliancesOn.get(j));
-						dataWriter.println("Appliances Turned Low: " + affectedAppliancesLow.get(j));
-						dataWriter.println("Appliances Turned Off: " + affectedAppliancesOff.get(j));
-					}
-					
 					dataWriter.close();
-					
-
-//TODO: write appliances/locations that were affected during each interval
-					//use appliance IDs and location IDs
-					
 					break;
 				case "Q":
 					//quit the program
@@ -438,7 +448,7 @@ class AppClient{
 	}
 
 	// brown out handling - Colin
-	private int startBrownOut(int currStep, ArrayList<Appliance> appliances, HashMap<Integer, Integer> affectedLocations, ArrayList<ArrayList<Integer>> affectedAppliancesOff,
+	private int startBrownOut(int currStep, ArrayList<Appliance> appliances, HashMap<Integer, Integer> affectedLocations, ArrayList<HashSet<Integer>> affectedLocationsStep, ArrayList<ArrayList<Integer>> affectedAppliancesOff,
 	float[][] totalPowerConsumedTracker, int[] appliancesTurnedOff, int[] sortedRoomIDs, float totalAllowablePower) {
 		int numBrownOuts = 0;
 		for (int roomID : sortedRoomIDs) {
@@ -451,6 +461,7 @@ class AppClient{
 				}
 			}
 			// for a brown out, increment the count of the roomID in affectedLocations
+			affectedLocationsStep.get(currStep).add(roomID);
 			affectedLocations.put(roomID, affectedLocations.get(roomID) + 1);
 			++numBrownOuts;
 			if (totalPowerConsumedTracker[currStep][2] <= totalAllowablePower) {
