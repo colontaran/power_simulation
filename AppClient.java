@@ -368,12 +368,12 @@ class AppClient{
 					// write affected appliance and location ids for each step
 					for (int j = 0; j < numSteps; j++) {
 						dataWriter.println("Step " + (j + 1) + ": ");
-						dataWriter.println("Appliances Turned On: " + affectedAppliancesOn.get(j));
-						dataWriter.println("Appliances Turned Low: " + affectedAppliancesLow.get(j));
-						dataWriter.println("Appliances Turned Off: " + affectedAppliancesOff.get(j));
+						dataWriter.println(printArray("Appliances Turned On", affectedAppliancesOn.get(j)));
+						dataWriter.println(printArray("Appliances Turned Low", affectedAppliancesLow.get(j)));
+						dataWriter.println(printArray("Appliances Turned Off", affectedAppliancesOff.get(j)));
 						ArrayList<Integer> sortedAffectedLocationsStep = new ArrayList<>(affectedLocationsStep.get(j));
 						Collections.sort(sortedAffectedLocationsStep);
-						dataWriter.println("Locations Browned Out: " + sortedAffectedLocationsStep);
+						dataWriter.println(printArray("Locations Browned Out", sortedAffectedLocationsStep));
 						dataWriter.println();
 					}
 
@@ -445,6 +445,16 @@ class AppClient{
 		}
 		return outputString; 
 		
+	}
+
+	public static String printArray(String title, ArrayList<Integer> intArray) {
+		String outputString = title + ","; 
+		if (!intArray.isEmpty()) {
+			for (int item : intArray) {
+				outputString += item + ",";
+			}
+		}
+		return outputString;
 	}
 
 	// brown out handling - Colin
